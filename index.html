@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LIWEILI ARCHITECTURE — Ternary PPU</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* 你的原有CSS代码保持不变 */
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--black:#05070f;--deep:#080d1a;--blue:#1a6fff;--blue-dim:#0d3a8a;--glow:#4d9fff;--gold:#c8972a;--gold-lt:#e8b84b;--white:#eef2ff;--silver:#7a8aaa;--line2:#1e2c4a}
+    html{scroll-behavior:smooth}
+    body{background:var(--black);color:var(--white);font-family:'Cormorant Garamond',Georgia,serif;overflow-x:hidden}
+    .lang-switcher{display:flex;gap:.3rem;align-items:center}
+    .lang-btn{font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--silver);background:none;border:1px solid transparent;padding:.3rem .7rem;cursor:pointer;transition:all .3s;-webkit-tap-highlight-color:transparent}
+    .lang-btn:hover,.lang-btn:focus{color:var(--white);border-color:var(--line2);outline:none}
+    .lang-btn.active{color:var(--gold-lt);border-color:var(--gold);background:rgba(200,151,42,.08)}
+    .lang-sep{color:var(--line2);font-size:.5rem}
+    nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;justify-content:space-between;align-items:center;padding:1.5rem 2.5rem;transition:all .4s}
+    nav.scrolled{background:rgba(5,7,15,.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--line2)}
+    .nav-left{display:flex;align-items:center;gap:1.5rem}
+    .nav-logo{font-family:'Space Mono',monospace;font-size:.65rem;letter-spacing:.25em;text-transform:uppercase;color:var(--white);text-decoration:none;display:flex;align-items:center;gap:.7rem}
+    .nav-dot{width:6px;height:6px;border-radius:50%;background:var(--blue);box-shadow:0 0 10px var(--blue);animation:pulse 2s ease-in-out infinite;flex-shrink:0}
+    @keyframes pulse{0%,100%{box-shadow:0 0 6px var(--blue)}50%{box-shadow:0 0 20px var(--glow),0 0 40px var(--blue)}}
+    .nav-right{display:flex;align-items:center;gap:2rem}
+    .nav-links{display:flex;gap:2rem;list-style:none}
+    .nav-links a{font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--silver);text-decoration:none;transition:color .3s}
+    .nav-links a:hover{color:var(--white)}
+    #hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:9rem 2.5rem 5rem;position:relative;overflow:hidden}
+    .hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(26,111,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(26,111,255,.04) 1px,transparent 1px);background-size:70px 70px;animation:gridShift 20s linear infinite}
+    @keyframes gridShift{0%{background-position:0 0}100%{background-position:70px 70px}}
+    .hero-glow{position:absolute;top:15%;left:55%;width:500px;height:500px;background:radial-gradient(ellipse,rgba(26,111,255,.12) 0%,transparent 70%);border-radius:50%;animation:glowFloat 8s ease-in-out infinite;pointer-events:none}
+    .hero-glow2{position:absolute;top:60%;left:20%;width:350px;height:350px;background:radial-gradient(ellipse,rgba(200,151,42,.07) 0%,transparent 70%);border-radius:50%;animation:glowFloat 12s ease-in-out infinite reverse;pointer-events:none}
+    @keyframes glowFloat{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.15)}}
+    .hero-eyebrow{font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.4em;text-transform:uppercase;color:var(--blue);margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;position:relative;z-index:2;animation:fadeUp 1s .3s both}
+    .hero-eyebrow::before{content:'';width:24px;height:1px;background:var(--blue);box-shadow:0 0 8px var(--blue);flex-shrink:0}
+    .hero-title{font-family:'Bebas Neue',Impact,sans-serif;font-size:clamp(4.5rem,18vw,13rem);line-height:.88;position:relative;z-index:2;animation:fadeUp 1s .5s both}
+    .hero-title .l1{color:var(--white);display:block}
+    .hero-title .l2{display:block;color:transparent;background:linear-gradient(135deg,var(--blue) 0%,var(--glow) 40%,var(--gold) 100%);-webkit-background-clip:text;background-clip:text}
+    .hero-badge{display:inline-flex;align-items:center;gap:.8rem;border:1px solid var(--blue-dim);padding:.6rem 1.2rem;margin-top:2rem;background:rgba(26,111,255,.06);position:relative;z-index:2;animation:fadeUp 1s .7s both;max-width:100%}
+    .hero-badge-dot{width:5px;height:5px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold);flex-shrink:0}
+    .hero-badge span{font-family:'Space Mono',monospace;font-size:.55rem;letter-spacing:.25em;color:var(--gold-lt)}
+    .hero-sub{margin-top:2rem;max-width:480px;font-size:clamp(1.1rem,3vw,1.4rem);font-weight:300;font-style:italic;line-height:1.65;color:var(--silver);position:relative;z-index:2;animation:fadeUp 1s .85s both}
+    .hero-cta{margin-top:3rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;position:relative;z-index:2;animation:fadeUp 1s 1s both}
+    .btn-primary{font-family:'Space Mono',monospace;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--black);background:linear-gradient(135deg,var(--blue),var(--glow));padding:1rem 2.5rem;text-decoration:none;transition:all .3s;box-shadow:0 0 30px rgba(26,111,255,.3);-webkit-tap-highlight-color:transparent}
+    .btn-primary:hover{box-shadow:0 0 50px rgba(26,111,255,.6);transform:translateY(-2px)}
+    .btn-secondary{font-family:'Space Mono',monospace;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--silver);text-decoration:none;border-bottom:1px solid var(--line2);padding-bottom:.3rem;transition:color .3s,border-color .3s}
+    .btn-secondary:hover{color:var(--white);border-color:var(--silver)}
+    .section-label{font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.4em;text-transform:uppercase;color:var(--blue);margin-bottom:4rem;display:flex;align-items:center;gap:1.5rem}
+    .section-label::after{content:'';flex:1;max-width:140px;height:1px;background:linear-gradient(90deg,var(--blue-dim),transparent)}
+    #manifesto{padding:8rem 2.5rem;position:relative}
+    .manifesto-block{max-width:860px}
+    .manifesto-statement{font-family:'Bebas Neue',Impact,sans-serif;font-size:clamp(2.4rem,6vw,5.5rem);line-height:1;margin-bottom:1.5rem}
+    .manifesto-statement .accent{color:var(--blue)}
+    .manifesto-statement .gold{color:var(--gold-lt)}
+    .manifesto-body{font-size:clamp(1rem,2.5vw,1.25rem);font-weight:300;font-style:italic;line-height:1.9;color:var(--silver);margin-bottom:4rem;padding-left:2rem;border-left:2px solid var(--blue-dim)}
+    .manifesto-divider{width:100%;height:1px;background:linear-gradient(90deg,var(--blue-dim),var(--gold) 50%,transparent);margin:3rem 0;opacity:.4}
+    #performance{padding:5rem 2.5rem 8rem;background:var(--deep);position:relative}
+    #performance::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--blue),var(--gold),transparent)}
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line2);margin-top:4rem}
+    .kpi-item{padding:2.5rem 2rem;border-right:1px solid var(--line2);border-bottom:1px solid var(--line2);position:relative;overflow:hidden;transition:background .4s}
+    .kpi-item:nth-child(4n){border-right:none}
+    .kpi-item:nth-last-child(-n+4){border-bottom:none}
+    .kpi-item:hover{background:rgba(26,111,255,.05)}
+    .kpi-item::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--gold));transform:scaleX(0);transition:transform .4s;transform-origin:left}
+    .kpi-item:hover::after{transform:scaleX(1)}
+    .kpi-number{font-family:'Bebas Neue',Impact,sans-serif;font-size:clamp(2.5rem,4vw,3.5rem);line-height:1;background:linear-gradient(135deg,var(--white),var(--glow));-webkit-background-clip:text;background-clip:text;color:transparent}
+    .kpi-unit{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--gold);letter-spacing:.2em;margin-top:.4rem;text-transform:uppercase}
+    .kpi-label{font-size:.9rem;font-style:italic;color:var(--silver);margin-top:.8rem;line-height:1.5}
+    #philosophy{padding:8rem 2.5rem;display:grid;grid-template-columns:1fr 1fr;gap:6rem;align-items:center}
+    .big-quote{font-family:'Bebas Neue',Impact,sans-serif;font-size:clamp(3rem,7vw,7rem);line-height:.92}
+    .big-quote .ghost{color:transparent;-webkit-text-stroke:1px var(--line2);display:block}
+    .big-quote .lit{display:block;color:transparent;background:linear-gradient(135deg,var(--blue),var(--gold-lt));-webkit-background-clip:text;background-clip:text}
+    .philosophy-right p{font-size:clamp(1rem,2vw,1.25rem);font-weight:300;line-height:1.9;color:var(--silver);margin-bottom:1.8rem}
+    .philosophy-right p strong{color:var(--white);font-style:italic;font-weight:400}
+    .philosophy-right .blue{color:var(--glow);font-style:italic}
+    .philosophy-right .gold-t{color:var(--gold-lt);font-style:italic}
+    #sectors{padding:5rem 2.5rem 8rem;background:var(--deep);position:relative}
+    #sectors::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),var(--blue),transparent)}
+    .sectors-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin-top:4rem}
+    .sector-item{background:var(--black);padding:3rem 2rem;border-top:2px solid transparent;transition:border-color .3s}
+    .sector-item:hover{border-top-color:var(--blue)}
+    .sector-item:hover .sector-icon{color:var(--blue);text-shadow:0 0 20px var(--blue)}
+    .sector-icon{font-size:1.8rem;margin-bottom:1.2rem;color:var(--blue-dim);transition:color .3s,text-shadow .3s}
+    .sector-number{font-family:'Space Mono',monospace;font-size:.55rem;color:var(--blue-dim);letter-spacing:.3em;margin-bottom:1rem}
+    .sector-name{font-family:'Bebas Neue',Impact,sans-serif;font-size:2rem;line-height:1;color:var(--white);margin-bottom:1rem}
+    .sector-desc{font-size:.9rem;font-style:italic;color:var(--silver);line-height:1.7}
+    #contact{padding:10rem 2.5rem;text-align:center;position:relative;overflow:hidden}
+    .contact-orb{position:absolute;top:50%;left:50%;width:700px;height:700px;transform:translate(-50%,-50%);background:radial-gradient(ellipse,rgba(26,111,255,.08) 0%,rgba(200,151,42,.04) 40%,transparent 70%);border-radius:50%;pointer-events:none;animation:glowFloat 10s ease-in-out infinite}
+    .contact-title{font-family:'Bebas Neue',Impact,sans-serif;font-size:clamp(3.5rem,12vw,10rem);line-height:.92;color:var(--white);position:relative;z-index:1}
+    .contact-title .grad{display:block;background:linear-gradient(135deg,var(--blue),var(--gold-lt));-webkit-background-clip:text;background-clip:text;color:transparent}
+    .contact-sub{font-size:clamp(1rem,2.5vw,1.3rem);font-style:italic;color:var(--silver);margin:2rem 0 3rem;line-height:1.7;position:relative;z-index:1}
+    .contact-divider{width:100px;height:1px;background:linear-gradient(90deg,transparent,var(--blue),var(--gold),transparent);margin:0 auto 2.5rem}
+    .contact-email{font-family:'Space Mono',monospace;font-size:clamp(.6rem,2vw,.85rem);letter-spacing:.15em;color:var(--glow);text-decoration:none;position:relative;z-index:1;border-bottom:1px solid var(--blue-dim);padding-bottom:.4rem;display:inline-block;transition:color .3s,border-color .3s}
+    .contact-email:hover{color:var(--gold-lt);border-color:var(--gold)}
+    footer{padding:2.5rem;border-top:1px solid var(--line2);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
+    .footer-logo{font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.25em;color:var(--silver);display:flex;align-items:center;gap:.7rem}
+    .footer-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);box-shadow:0 0 8px var(--blue)}
+    .footer-copy{font-family:'Space Mono',monospace;font-size:.52rem;letter-spacing:.15em;color:var(--line2)}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+    @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.kpi-item:nth-child(2n){border-right:none}.kpi-item:nth-last-child(-n+2){border-bottom:none}.sectors-grid{grid-template-columns:repeat(2,1fr)}#philosophy{grid-template-columns:1fr;gap:4rem}}
+    @media(max-width:768px){.nav-links{display:none}nav{padding:1.2rem 1.5rem}#hero{padding:7rem 1.5rem 4rem}#manifesto,#philosophy,#contact{padding-left:1.5rem;padding-right:1.5rem}#performance,#sectors{padding-left:1.5rem;padding-right:1.5rem}footer{padding:2rem 1.5rem}.kpi-grid{grid-template-columns:1fr 1fr}.sectors-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:480px){.kpi-grid{grid-template-columns:1fr}.kpi-item{border-right:none!important;border-bottom:1px solid var(--line2)!important}.kpi-item:last-child{border-bottom:none!important}.sectors-grid{grid-template-columns:1fr}.hero-badge span{font-size:.48rem;letter-spacing:.15em}}
+  </style>
+</head>
+<body>
+  <nav id="navbar">
+    <div class="nav-left">
+      <a href="#" class="nav-logo"><span class="nav-dot"></span>LIWEILI ARCHITECTURE</a>
+    </div>
+    <div class="nav-right">
+      <ul class="nav-links">
+        <li><a href="#manifesto" data-i18n="nav_vision">Vision</a></li>
+        <li><a href="#performance" data-i18n="nav_performance">Performance</a></li>
+        <li><a href="#sectors" data-i18n="nav_sectors">Sectors</a></li>
+        <li><a href="#contact" data-i18n="nav_contact">Contact</a></li>
+      </ul>
+      <div class="lang-switcher">
+        <button class="lang-btn active" onclick="setLang('en')">EN</button>
+        <span class="lang-sep">|</span>
+        <button class="lang-btn" onclick="setLang('de')">DE</button>
+        <span class="lang-sep">|</span>
+        <button class="lang-btn" onclick="setLang('fr')">FR</button>
+      </div>
+    </div>
+  </nav>
+  
+  <section id="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-glow"></div>
+    <div class="hero-glow2"></div>
+    <div class="hero-eyebrow" data-i18n="hero_eyebrow">Ternary Photonic Processing Unit — Generation One</div>
+    <h1 class="hero-title">
+      <span class="l1">LIWEILI</span>
+      <span class="l2">TERNARY PPU</span>
+    </h1>
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      <span data-i18n="hero_badge">The Only Ternary Device Engineered for Level 5 Autonomy</span>
+    </div>
+    <p class="hero-sub" data-i18n="hero_sub">Where failure is not an option. Safety enforced by physics — not promises.</p>
+    <div class="hero-cta">
+      <a href="#contact" class="btn-primary" data-i18n="hero_cta1">Request Partnership</a>
+      <a href="#manifesto" class="btn-secondary" data-i18n="hero_cta2">Our Vision</a>
+    </div>
+  </section>
+  
+  <section id="intro" style="padding:6rem 2.5rem;max-width:900px;margin:0 auto;">
+    <p style="font-family:'Bebas Neue',Impact,sans-serif;font-size:clamp(1.8rem,4vw,2.8rem);color:#eef2ff;line-height:1.1;margin-bottom:2rem;">The age of silicon is over.</p>
+    <p style="font-size:clamp(1rem,2vw,1.2rem);font-weight:300;font-style:italic;line-height:1.9;color:#7a8aaa;margin-bottom:1.5rem;">For half a century, the world built its intelligence on binary logic — zero and one. Two states. It served us well. Until now.</p>
+    <p style="font-size:clamp(1rem,2vw,1.2rem);font-weight:300;font-style:italic;line-height:1.9;color:#7a8aaa;margin-bottom:1.5rem;">The industries that cannot fail — automotive, medical, aerospace, defense — demand something silicon was never designed to deliver. True hardware safety. True longevity. True Level 5 autonomy.</p>
+    <p style="font-size:clamp(1rem,2vw,1.2rem);font-weight:300;font-style:italic;line-height:1.9;color:#7a8aaa;margin-bottom:1.5rem;">LIWEILI ARCHITECTURE was founded on one conviction: the future of AI is not digital. It is physical.</p>
+    <p style="font-size:clamp(1rem,2vw,1.2rem);font-weight:300;font-style:italic;line-height:1.9;color:#7a8aaa;margin-bottom:1.5rem;">The result is the <strong style="color:#eef2ff;font-style:normal;">LIWEILI Ternary PPU</strong> — the world's first ternary photonic processor. Not binary. Three states. More precision. Less power. The computational foundation that makes true AGI possible.</p>
+    <p style="font-size:clamp(1rem,2vw,1.2rem);font-weight:300;font-style:italic;line-height:1.9;color:#7a8aaa;margin-bottom:1.5rem;">Safety enforced by physics. Not promises. Not software. Physics.</p>
+    <p style="font-family:'Space Mono',monospace;font-size:clamp(.7rem,1.5vw,.9rem);color:#c8972a;letter-spacing:.15em;margin-top:2rem;">European IP protected &nbsp;|&nbsp; JV structure in place &nbsp;|&nbsp; 20 billion units target</p>
+  </section>
+  
+  <section id="manifesto">
+    <div class="section-label" data-i18n="sec_vision">01 — Vision</div>
+    <div class="manifesto-block">
+      <h2 class="manifesto-statement"><span data-i18n="m1a">The world runs on</span> <span class="accent" data-i18n="m1b">silicon.</span><br><span data-i18n="m1c">Silicon is ending.</span></h2>
+      <p class="manifesto-body" data-i18n="m1body">The next era of AI demands more than faster chips.<br>Not binary — <strong>Ternary.</strong><br>Three states. More precision. Less power. True intelligence.</p>
+      <div class="manifesto-divider"></div>
+      <h2 class="manifesto-statement"><span data-i18n="m2a">Only</span> <span class="accent" data-i18n="m2b">physical AI</span> <span data-i18n="m2c">can see.</span><br><span data-i18n="m2d">Can feel. Can rebuild.</span></h2>
+      <p class="manifesto-body" data-i18n="m2body">Digital AI simulates the world.<br>Physical AI experiences it.<br>To see — requires physical photonics.<br>To feel — requires real-world presence.<br>To rebuild — requires hardware that endures across decades.</p>
+      <div class="manifesto-divider"></div>
+      <h2 class="manifesto-statement"><span data-i18n="m3a">Safety enforced by</span> <span class="gold" data-i18n="m3b">physics</span> —<br><span data-i18n="m3c">not promises.</span></h2>
+      <p class="manifesto-body" data-i18n="m3body">No software can override it.<br>No adversary can bypass it.<br>Safety is not a feature. It is the architecture.</p>
+    </div>
+  </section>
+  
+  <section id="performance">
+    <div class="section-label" data-i18n="sec_perf">02 — Performance</div>
+    <div class="kpi-grid">
+      <div class="kpi-item"><div class="kpi-number">20-25</div><div class="kpi-unit" data-i18n="k1u">Watts</div><div class="kpi-label" data-i18n="k1l">Ultra-low power consumption</div></div>
+      <div class="kpi-item"><div class="kpi-number">30</div><div class="kpi-unit" data-i18n="k2u">Year Lifecycle</div><div class="kpi-label" data-i18n="k2l">Longevity without compromise</div></div>
+      <div class="kpi-item"><div class="kpi-number">95-99%</div><div class="kpi-unit" data-i18n="k3u">Yield Rate</div><div class="kpi-label" data-i18n="k3l">Production-grade reliability</div></div>
+      <div class="kpi-item"><div class="kpi-number">20B</div><div class="kpi-unit" data-i18n="k4u">Units Target</div><div class="kpi-label" data-i18n="k4l">Global scale — JV structure ready</div></div>
+      <div class="kpi-item"><div class="kpi-number">3</div><div class="kpi-unit" data-i18n="k0u">Ternary Logic</div><div class="kpi-label" data-i18n="k0l">Not binary. Three states — beyond all existing AI hardware</div></div>
+      <div class="kpi-item"><div class="kpi-number">L5</div><div class="kpi-unit" data-i18n="k5u">Autonomy</div><div class="kpi-label" data-i18n="k5l">The only device for Level 5</div></div>
+      <div class="kpi-item"><div class="kpi-number">AGI</div><div class="kpi-unit" data-i18n="k6u">Ready</div><div class="kpi-label" data-i18n="k6l">Hardware-ready for general AI</div></div>
+      <div class="kpi-item"><div class="kpi-number">INF</div><div class="kpi-unit" data-i18n="k7u">Non-Bypassable</div><div class="kpi-label" data-i18n="k7l">Physically impossible to override</div></div>
+      <div class="kpi-item"><div class="kpi-number">EU</div><div class="kpi-unit" data-i18n="k8u">IP Protected</div><div class="kpi-label" data-i18n="k8l">European — fully protected</div></div>
+    </div>
+  </section>
+  
+  <section id="philosophy">
+    <div class="philosophy-left">
+      <div class="big-quote">
+        <span class="ghost" data-i18n="q1">DIGITAL</span>
+        <span class="ghost">AI</span>
+        <span class="lit" data-i18n="q2">THINKS.</span>
+        <span class="ghost" data-i18n="q3">PHYSICAL</span>
+        <span class="ghost">AI</span>
+        <span class="lit" data-i18n="q4">LIVES.</span>
+      </div>
+    </div>
+    <div class="philosophy-right">
+      <p data-i18n="p1">The LIWEILI Ternary PPU is not an incremental improvement. It is a complete departure from the silicon paradigm.</p>
+      <p><span data-i18n="p2a">Where conventional processors simulate intelligence through computation, the LIWEILI Ternary PPU operates through </span><span class="blue" data-i18n="p2b">physical photonic interaction</span><span data-i18n="p2c"> — mirroring the way biological systems perceive the real world.</span></p>
+      <p><span data-i18n="p3a">This is not a product. It is a </span><strong data-i18n="p3b">new category of intelligence hardware</strong><span data-i18n="p3c"> — where safety, performance, and longevity are inseparable from the physics itself.</span></p>
+      <p><span data-i18n="p4a">Ready for AGI. Ready for Europe. </span><span class="gold-t" data-i18n="p4b">Ready now.</span></p>
+    </div>
+  </section>
+  
+  <section id="sectors">
+    <div class="section-label" data-i18n="sec_sect">03 — Sectors</div>
+    <div class="sectors-grid">
+      <div class="sector-item"><div class="sector-icon">⧫</div><div class="sector-number">01</div><div class="sector-name" data-i18n="s1n">Automotive</div><div class="sector-desc" data-i18n="s1d">Level 5 full autonomy. Zero-failure hardware safety. The foundation silicon could not deliver.</div></div>
+      <div class="sector-item"><div class="sector-icon">⧫</div><div class="sector-number">02</div><div class="sector-name" data-i18n="s2n">Medical</div><div class="sector-desc" data-i18n="s2d">Fully autonomous systems. Regulatory-grade hardware safety. Physics-enforced — not software-patched.</div></div>
+      <div class="sector-item"><div class="sector-icon">⧫</div><div class="sector-number">03</div><div class="sector-name" data-i18n="s3n">Aerospace</div><div class="sector-desc" data-i18n="s3d">Unmanned autonomous flight. 30-year lifecycle for extreme operational environments.</div></div>
+      <div class="sector-item"><div class="sector-icon">⧫</div><div class="sector-number">04</div><div class="sector-name" data-i18n="s4n">Defense</div><div class="sector-desc" data-i18n="s4d">No adversarial override. No remote bypass. Hardware-enforced human control — absolute.</div></div>
+    </div>
+  </section>
+  
+  <section id="contact">
+    <div class="contact-orb"></div>
+    <h2 class="contact-title"><span data-i18n="ct1">PARTNER</span><span class="grad" data-i18n="ct2">WITH US</span></h2>
+    <p class="contact-sub" data-i18n="csub">European JV structure in place. IP protected.<br>Seeking manufacturing and market partners.</p>
+    <div class="contact-divider"></div>
+    <a href="#" class="contact-email">partnerships@liweili.arch</a>
+  </section>
+  
+  <footer>
+    <div class="footer-logo"><span class="footer-dot"></span>LIWEILI ARCHITECTURE — TERNARY PPU</div>
+    <div class="footer-copy">© 2026 LIWEILI ARCHITECTURE. All rights reserved.</div>
+  </footer>
+
+  <script>
+    // 翻译字典
+    var T = {
+      en: {
+        nav_vision: "Vision",
+        nav_performance: "Performance",
+        nav_sectors: "Sectors",
+        nav_contact: "Contact",
+        hero_eyebrow: "Ternary Photonic Processing Unit — Generation One",
+        hero_badge: "The Only Ternary Device Engineered for Level 5 Autonomy",
+        hero_sub: "Where failure is not an option. Safety enforced by physics — not promises.",
+        hero_cta1: "Request Partnership",
+        hero_cta2: "Our Vision",
+        sec_vision: "01 — Vision",
+        sec_perf: "02 — Performance",
+        sec_sect: "03 — Sectors",
+        m1a: "The world runs on",
+        m1b: "silicon.",
+        m1c: "Silicon is ending.",
+        m1body: "The next era of AI demands more than faster chips.<br>Not binary — <strong>Ternary.</strong><br>Three states. More precision. Less power. True intelligence.",
+        m2a: "Only",
+        m2b: "physical AI",
+        m2c: "can see.",
+        m2d: "Can feel. Can rebuild.",
+        m2body: "Digital AI simulates the world.<br>Physical AI experiences it.<br>To see — requires physical photonics.<br>To feel — requires real-world presence.<br>To rebuild — requires hardware that endures across decades.",
+        m3a: "Safety enforced by",
+        m3b: "physics",
+        m3c: "not promises.",
+        m3body: "No software can override it.<br>No adversary can bypass it.<br>Safety is not a feature. It is the architecture.",
+        k1u: "Watts",
+        k1l: "Ultra-low power consumption",
+        k2u: "Year Lifecycle",
+        k2l: "Longevity without compromise",
+        k3u: "Yield Rate",
+        k3l: "Production-grade reliability",
+        k4u: "Units Target",
+        k4l: "Global scale — JV structure ready",
+        k0u: "Ternary Logic",
+        k0l: "Not binary. Three states — beyond all existing AI hardware",
+        k5u: "Autonomy",
+        k5l: "The only device for Level 5",
+        k6u: "Ready",
+        k6l: "Hardware-ready for general AI",
+        k7u: "Non-Bypassable",
+        k7l: "Physically impossible to override",
+        k8u: "IP Protected",
+        k8l: "European — fully protected",
+        q1: "DIGITAL",
+        q2: "THINKS.",
+        q3: "PHYSICAL",
+        q4: "LIVES.",
+        p1: "The LIWEILI Ternary PPU is not an incremental improvement. It is a complete departure from the silicon paradigm.",
+        p2a: "Where conventional processors simulate intelligence through computation, the LIWEILI Ternary PPU operates through ",
+        p2b: "physical photonic interaction",
+        p2c: " — mirroring the way biological systems perceive the real world.",
+        p3a: "This is not a product. It is a ",
+        p3b: "new category of intelligence hardware",
+        p3c: " — where safety, performance, and longevity are inseparable from the physics itself.",
+        p4a: "Ready for AGI. Ready for Europe. ",
+        p4b: "Ready now.",
+        s1n: "Automotive",
+        s1d: "Level 5 full autonomy. Zero-failure hardware safety. The foundation silicon could not deliver.",
+        s2n: "Medical",
+        s2d: "Fully autonomous systems. Regulatory-grade hardware safety. Physics-enforced — not software-patched.",
+        s3n: "Aerospace",
+        s3d: "Unmanned autonomous flight. 30-year lifecycle for extreme operational environments.",
+        s4n: "Defense",
+        s4d: "No adversarial override. No remote bypass. Hardware-enforced human control — absolute.",
+        ct1: "PARTNER",
+        ct2: "WITH US",
+        csub: "European JV structure in place. IP protected.<br>Seeking manufacturing and market partners."
+      },
+      de: {
+        nav_vision: "Vision",
+        nav_performance: "Leistung",
+        nav_sectors: "Sektoren",
+        nav_contact: "Kontakt",
+        hero_eyebrow: "Ternäre Photonische Verarbeitungseinheit — Generation Eins",
+        hero_badge: "Das einzige ternäre Gerät für Level-5-Autonomie",
+        hero_sub: "Wo Versagen keine Option ist. Sicherheit durch Physik — nicht durch Versprechen.",
+        hero_cta1: "Partnerschaft anfragen",
+        hero_cta2: "Unsere Vision",
+        sec_vision: "01 — Vision",
+        sec_perf: "02 — Leistung",
+        sec_sect: "03 — Sektoren",
+        m1a: "Die Welt läuft auf",
+        m1b: "Silizium.",
+        m1c: "Silizium hat seine Grenzen erreicht.",
+        m1body: "Die nächste Ära der KI verlangt mehr als schnellere Chips.<br>Nicht binär — <strong>Ternär.</strong><br>Drei Zustände. Mehr Präzision. Weniger Energie. Echte Intelligenz.",
+        m2a: "Nur",
+        m2b: "physische KI",
+        m2c: "kann sehen.",
+        m2d: "Kann fühlen. Kann sich neu aufbauen.",
+        m2body: "Digitale KI simuliert die Welt.<br>Physische KI erlebt sie.<br>Sehen — erfordert physikalische Photonik.<br>Fühlen — erfordert reale Präsenz.<br>Neuaufbau — erfordert Hardware, die Jahrzehnte überdauert.",
+        m3a: "Sicherheit durch",
+        m3b: "Physik",
+        m3c: "nicht durch Versprechen.",
+        m3body: "Keine Software kann sie überschreiben.<br>Kein Angreifer kann sie umgehen.<br>Sicherheit ist kein Merkmal. Sie ist die Architektur.",
+        k1u: "Watt",
+        k1l: "Ultraniedriger Stromverbrauch",
+        k2u: "Jahre Lebensdauer",
+        k2l: "Langlebigkeit ohne Kompromisse",
+        k3u: "Ausbeute",
+        k3l: "Produktionsreife Zuverlässigkeit",
+        k4u: "Einheiten Ziel",
+        k4l: "Globale Skalierung — JV bereit",
+        k0u: "Ternäre Logik",
+        k0l: "Nicht binär. Drei Zustände — jenseits aller bestehenden KI-Hardware",
+        k5u: "Autonomie",
+        k5l: "Einzig für Level-5-Autonomie",
+        k6u: "Bereit",
+        k6l: "Hardware für allgemeine KI",
+        k7u: "Nicht umgehbar",
+        k7l: "Physikalisch unmöglich zu überschreiben",
+        k8u: "IP Geschützt",
+        k8l: "Europäisch — vollständig geschützt",
+        q1: "DIGITALE",
+        q2: "DENKT.",
+        q3: "PHYSISCHE",
+        q4: "LEBT.",
+        p1: "Die LIWEILI Ternäre PPU ist kein inkrementeller Fortschritt. Sie ist ein vollständiger Bruch mit dem Silizium-Paradigma.",
+        p2a: "Die LIWEILI Ternäre PPU operiert durch ",
+        p2b: "physikalische photonische Interaktion",
+        p2c: " — so wie biologische Systeme die reale Welt wahrnehmen.",
+        p3a: "Dies ist kein Produkt. Es ist eine ",
+        p3b: "neue Kategorie von Intelligenz-Hardware",
+        p3c: " — bei der Sicherheit, Leistung und Langlebigkeit untrennbar von der Physik sind.",
+        p4a: "Bereit für AGI. Bereit für Europa. ",
+        p4b: "Jetzt bereit.",
+        s1n: "Automobil",
+        s1d: "Level-5-Vollautonomie. Null-Ausfall-Sicherheit. Das Fundament, das Silizium nicht liefern konnte.",
+        s2n: "Medizin",
+        s2d: "Vollautonome Systeme. Regulatorische Hardware-Sicherheit. Physikalisch erzwungen.",
+        s3n: "Luft- und Raumfahrt",
+        s3d: "Unbemannte autonome Flugsysteme. 30 Jahre Lebensdauer für extreme Umgebungen.",
+        s4n: "Verteidigung",
+        s4d: "Keine feindliche Übersteuerung. Kein Fernzugriff. Hardware-erzwungene menschliche Kontrolle.",
+        ct1: "PARTNER",
+        ct2: "WERDEN",
+        csub: "Europäische JV-Struktur bereit. IP geschützt.<br>Wir suchen Fertigungs- und Marktpartner."
+      },
+      fr: {
+        nav_vision: "Vision",
+        nav_performance: "Performance",
+        nav_sectors: "Secteurs",
+        nav_contact: "Contact",
+        hero_eyebrow: "Unité de traitement photonique ternaire — Génération Un",
+        hero_badge: "Le seul dispositif ternaire pour l'autonomie de niveau 5",
+        hero_sub: "La sécurité imposée par la physique — pas par des promesses.",
+        hero_cta1: "Demander un partenariat",
+        hero_cta2: "Notre vision",
+        sec_vision: "01 — Vision",
+        sec_perf: "02 — Performance",
+        sec_sect: "03 — Secteurs",
+        m1a: "Le monde tourne sur",
+        m1b: "le silicium.",
+        m1c: "Le silicium touche à sa fin.",
+        m1body: "La prochaine ère de l'IA exige une nouvelle logique.<br>Pas binaire — <strong>Ternaire.</strong><br>Trois états. Plus de précision. Moins d'énergie. Une vraie intelligence.",
+        m2a: "Seule",
+        m2b: "l'IA physique",
+        m2c: "peut voir.",
+        m2d: "Peut ressentir. Peut se reconstruire.",
+        m2body: "L'IA numérique simule le monde.<br>L'IA physique l'expérimente.<br>Voir — nécessite de la photonique physique.<br>Ressentir — nécessite une présence réelle.<br>Se reconstruire — nécessite du matériel qui dure des décennies.",
+        m3a: "La sécurité imposée par",
+        m3b: "la physique",
+        m3c: "pas par des promesses.",
+        m3body: "Aucun logiciel ne peut l'ignorer.<br>Aucun adversaire ne peut le contourner.<br>La sécurité n'est pas une fonctionnalité. C'est l'architecture.",
+        k1u: "Watts",
+        k1l: "Consommation ultra-faible",
+        k2u: "Ans de durée de vie",
+        k2l: "Longévité sans compromis",
+        k3u: "Taux de rendement",
+        k3l: "Fiabilité de qualité production",
+        k4u: "Unités cibles",
+        k4l: "Déploiement mondial — JV prête",
+        k0u: "Logique Ternaire",
+        k0l: "Pas binaire. Trois états — au-delà de tout matériel IA existant",
+        k5u: "Autonomie",
+        k5l: "Le seul dispositif niveau 5",
+        k6u: "Prêt",
+        k6l: "Matériel prêt pour l'IA générale",
+        k7u: "Non contournable",
+        k7l: "Physiquement impossible à ignorer",
+        k8u: "PI Protégée",
+        k8l: "Européen — entièrement protégé",
+        q1: "L'IA",
+        q2: "PENSE.",
+        q3: "L'IA",
+        q4: "VIT.",
+        p1: "La LIWEILI PPU Ternaire n'est pas une amélioration progressive. C'est une rupture totale avec le paradigme du silicium.",
+        p2a: "La LIWEILI PPU Ternaire fonctionne par ",
+        p2b: "interaction photonique physique",
+        p2c: " — reflétant la façon dont les systèmes biologiques perçoivent le monde réel.",
+        p3a: "Ce n'est pas un produit. C'est une ",
+        p3b: "nouvelle catégorie de matériel intelligent",
+        p3c: " — où sécurité, performance et longévité sont inséparables de la physique.",
+        p4a: "Prêt pour l'AGI. Prêt pour l'Europe. ",
+        p4b: "Prêt maintenant.",
+        s1n: "Automobile",
+        s1d: "Autonomie complète niveau 5. Sécurité zéro défaut. Le fondement que le silicium ne pouvait pas fournir.",
+        s2n: "Médical",
+        s2d: "Systèmes entièrement autonomes. Sécurité matérielle réglementaire. Imposée par la physique.",
+        s3n: "Aérospatiale",
+        s3d: "Vol autonome sans pilote. Durée de vie 30 ans pour environnements extrêmes.",
+        s4n: "Défense",
+        s4d: "Aucun dépassement ennemi. Aucun contournement. Contrôle humain imposé par le matériel.",
+        ct1: "PARTENAIRE",
+        ct2: "AVEC NOUS",
+        csub: "Structure JV européenne en place. PI protégée.<br>Recherche de partenaires de fabrication et de marché."
+      }
+    };
+
+    // 语言切换函数
+    function setLang(lang) {
+      try {
+        if (!T[lang]) lang = 'en';
+        document.body.style.opacity = '0.7';
+        document.querySelectorAll('.lang-btn').forEach(function(b) {
+          b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang);
+        });
+        setTimeout(function() {
+          document.querySelectorAll('[data-i18n]').forEach(function(el) {
+            var k = el.getAttribute('data-i18n');
+            if (T[lang][k] !== undefined) {
+              if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                el.placeholder = T[lang][k];
+              } else {
+                el.innerHTML = T[lang][k];
+              }
+            }
+          });
+          document.documentElement.lang = lang;
+          document.body.style.opacity = '1';
+        }, 200);
+      } catch(e) {}
+    }
+
+    // 自动检测浏览器语言
+    (function() {
+      try {
+        var bl = (navigator.language || 'en').substring(0, 2).toLowerCase();
+        if (T[bl]) {
+          setLang(bl);
+        } else {
+          setLang('en');
+        }
+      } catch(e) {
+        setLang('en');
+      }
+    })();
+
+    // 导航栏滚动效果
+    window.addEventListener('scroll', function() {
+      var nav = document.getElementById('navbar');
+      if (window.scrollY > 50) {
+        nav.classList.add('scrolled');
+      } else {
+        nav.classList.remove('scrolled');
+      }
+    });
+
+    // 平滑滚动处理 (修复锚点被导航栏遮挡)
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          const navHeight = document.getElementById('navbar').offsetHeight;
+          const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - navHeight;
+          window.scrollTo({
+            top: targetPosition,
+            behavior: 'smooth'
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
